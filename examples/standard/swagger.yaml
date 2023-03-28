@@ -1,0 +1,515 @@
+openapi: 3.0.1
+
+info:
+  title: AAA
+  description: AAA HTTP API文档。
+  version: 0.0.1
+
+tags:
+  - name: auth
+    description: 鉴权类接口
+  - name: user
+    description: 用户类接口
+  - name: file
+    description: 文件类接口
+
+paths:
+  /auth/:name/:id:
+    get:
+      tags:
+        - auth
+      description: test
+      operationId: AuthTest
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+        - $ref: "#/components/parameters/Test"
+        - name: name
+          in: path
+          description: 名称
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: ID
+          schema:
+            type: integer
+            format: int32
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response"
+  /auth/send_code:
+    post:
+      tags: [ auth ]
+      description: 获取验证码接口；需通过滑块验证；验证码频率限制60秒一次。
+      operationId: SendCode
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ type, area_code, phone, ticket ]
+              properties:
+                type:
+                  $ref: "#/components/schemas/SendCodeType"
+                area_code:
+                  type: string
+                  description: 地区码
+                phone:
+                  type: string
+                  description: 手机号码
+                ticket:
+                  type: string
+                  description: 验证码通行证
+                randstr:
+                  type: string
+                  description: 验证码随机串(非微信小程序模式下必传)
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Response"
+                  - type: object
+                    properties:
+                      data:
+                        type: string
+                        description: 验证码唯一HASH标识，在使用验证码的场景需携带。
+  /auth/sms_login:
+    post:
+      tags: [ auth ]
+      description: 短信验证码登录接口
+      operationId: SMSLogin
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ area_code, phone, code, hash ]
+              properties:
+                area_code:
+                  type: string
+                  description: 地区码
+                phone:
+                  type: string
+                  description: 手机号码
+                code:
+                  type: string
+                  description: 短信验证码
+                hash:
+                  type: string
+                  description: 短信验证码HASHs
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Response"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/LoginResult"
+  /auth/passwd_login:
+    post:
+      tags: [ auth ]
+      description: 手机密码登录接口；需通过滑块验证；
+      operationId: PasswdLogin
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ area_code, phone, passwd, ticket ]
+              properties:
+                area_code:
+                  type: string
+                  description: 地区码
+                phone:
+                  type: string
+                  description: 手机号码
+                passwd:
+                  type: string
+                  description: 密码
+                ticket:
+                  type: string
+                  description: 验证码通行证
+                randstr:
+                  type: string
+                  description: 验证码随机串(非微信小程序模式下必传)
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Response"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/LoginResult"
+  /auth/logout:
+    get:
+      tags: [ auth ]
+      description: 退出登录
+      operationId: Logout
+      security:
+        - TokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response"
+
+  /user/set_passwd:
+    post:
+      tags: [ user ]
+      description: 设置密码
+      operationId: SetPasswd
+      security:
+        - TokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ passwd, code, hash ]
+              properties:
+                passwd:
+                  type: string
+                  description: 密码
+                code:
+                  type: string
+                  description: 短信验证码
+                hash:
+                  type: string
+                  description: 短信验证码HASH
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response"
+  /user/fetch:
+    get:
+      tags: [ user ]
+      description: 获取用户基本信息。
+      operationId: FetchUser
+      x-none-logic: true
+      security:
+        - TokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Response"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/User"
+  /user/update:
+    post:
+      tags: [ user ]
+      description: 更新用户基础信息
+      operationId: UpdateUser
+      security:
+        - TokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                nickname:
+                  type: string
+                  description: 昵称
+                  minLength: 1
+                  maxLength: 20
+                email:
+                  type: string
+                  pattern: ^\w[-\w.+]*@([A-Za-z0-9][-_A-Za-z0-9]*\.)+[A-Za-z]{2,14}$
+                  description: 邮箱
+                wechat:
+                  type: string
+                  description: 微信
+                avatar_id:
+                  type: string
+                  description: 头像ID
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Response"
+
+  /file/upload:
+    post:
+      tags: [ file ]
+      description: 上传文件。
+      operationId: UploadFile
+      security:
+        - TokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [ file ]
+              properties:
+                type:
+                  $ref: "#/components/schemas/FileType"
+                file:
+                  type: string
+                  description: 文件
+                  format: binary
+                  maxLength: 4096
+                  x-go-file-ext:
+                    - jpg
+                    - jpeg
+                    - png
+                    - gif
+      responses:
+        200:
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Response"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/UploadResult"
+  /file/download:
+    get:
+      tags: [ file ]
+      description: 下载文件
+      operationId: DownloadFile
+      x-serve-file: true
+      security:
+        - TokenAuth: [ ]
+      parameters:
+        - $ref: "#/components/parameters/Language"
+        - $ref: "#/components/parameters/DeviceType"
+        - name: id
+          in: query
+          description: 文件ID
+          required: true
+          schema:
+            type: string
+      responses:
+        200:
+          description: OK
+          content:
+            /*:
+              schema:
+                type: string
+                format: binary
+
+components:
+  securitySchemes:
+    TokenAuth:
+      type: apiKey
+      in: header
+      name: Authentication
+      description: 授权Token
+
+  parameters:
+    Language:
+      name: lang
+      in: query
+      schema:
+        $ref: "#/components/schemas/LangCode"
+    DeviceType:
+      name: dev_type
+      in: query
+      schema:
+        $ref: "#/components/schemas/DevType"
+    Test:
+        name: test
+        in: query
+        schema:
+          $ref: "#/components/schemas/Test"
+
+  schemas:
+    Test:
+      type: string
+      description: aaaa
+    Response:
+      type: object
+      description: 基础响应结构体
+      required:
+        - code
+      properties:
+        code:
+          type: integer
+          format: int32
+          description: |
+            用于标识请求状态：
+            - 2000: 请求成功
+            - 4000: 请求失败；该错误客户端直接根据 `errMsg` 显示相应提示信息。
+              - 4001: 未登录/登录已过期，需跳转至登录页。
+              - 4xxx: 本类错误码有其特定含义，客户端根据实际情况处理。
+            - 5000: 服务器异常；该错误统一显示为 `服务端异常`。
+        errMsg:
+          type: string
+          description: 响应描述
+    User:
+      type: object
+      description: 用户基本信息
+      properties:
+        id:
+          type: integer
+          format: int32
+          description: 用户ID
+        access_hash:
+          type: string
+          description: AccessHash
+          x-go-type: tex.JsInt64
+        nickname:
+          type: string
+          description: 用户昵称，默认会创建随机昵称。
+        avatar:
+          type: string
+          description: 用户头像，用户未设置头像时会有默认头像。
+        area_code:
+          type: string
+          description: 地区码
+        phone:
+          type: string
+          description: 手机号
+        email:
+          type: string
+          description: 邮箱
+        wechat:
+          type: string
+          description: 微信
+        can_chat:
+          type: boolean
+          description: 是否可以被发起会话
+        state:
+          $ref: "#/components/schemas/UserState"
+    UserState:
+      type: integer
+      description: 用户状态
+      format: uint8
+      enum:
+        - 0
+        - 1
+      x-go-enum:
+        UserStateEnabled: 0
+        UserStateDisabled: 1
+    SendCodeType:
+      type: integer
+      format: uint8
+      description: |
+        获取验证码类型：
+        - 0：登录
+        - 1：设置密码
+      enum:
+        - 0
+        - 1
+      x-go-enum:
+        SendCodeTypeLogin: 0
+        SendCodeTypeSetPwd: 1
+    LoginResult:
+      type: object
+      description: 登录结果
+      properties:
+        token:
+          type: string
+          description: |
+            用户登录态；当调用需登录的接口时，HTTP Header里需添加 `Authentication -> token`。
+        user:
+          $ref: "#/components/schemas/User"
+        new:
+          type: boolean
+          description: 新用户初次登录
+    FileType:
+      type: integer
+      format: uint8
+      description: |
+        上传文件类型：
+        - 0：头像
+        - 1：附件
+      enum:
+        - 0
+        - 1
+      x-go-enum:
+        FileTypeAvatar: 0
+        FileTypeAnnex: 1
+    UploadResult:
+      type: object
+      description: 上传结果
+      properties:
+        id:
+          type: string
+          description: 文件ID
+        url:
+          type: string
+          description: 文件URL
+    LangCode:
+      type: string
+      default: en
+      enum:
+        - zh
+        - en
+      description: |
+        语言类型；默认 `zh`；所有请求都可以携带该参数，服务端会根据语言返回相应的数据。
+        - zh：中文
+        - en：英文
+      x-go-enum:
+        LangCodeZH: zh
+        LangCodeEN: en
+    DevType:
+      type: string
+      default: web
+      enum:
+        - web
+        - mini
+      description: |
+        设备类型；默认 `web`；所有请求都可以携带该参数，便于请求跟踪与溯源。
+        - web：网页
+        - mini：小程序
+      x-go-enum:
+        DevTypeWeb: web
+        DevTypeMini: mini
